@@ -7,12 +7,10 @@ app = FastAPI()
 
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
 
-
 @app.post("/webhook")
 async def github_webhook(request: Request):
     payload = await request.json()
 
-    # push イベントのみ処理
     if "pusher" in payload and "repository" in payload:
         repo = payload["repository"]["full_name"]
         pusher = payload["pusher"]["name"]
@@ -20,6 +18,9 @@ async def github_webhook(request: Request):
 
         message = f"*{repo}* に *{pusher}* が push しました！\n<{url}|リポジトリを開く>"
 
-        await httpx.post(SLACK_WEBHOOK_URL, json={"text": message})
+        async with httpx.AsyncClient() as client:
+            res = await client.post(SLACK_WEBHOOK_URL, json={"text": message})
+            print("Slack response:", res.status_code, res.text)
 
     return {"status": "ok"}
+
